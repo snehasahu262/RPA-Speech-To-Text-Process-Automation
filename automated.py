@@ -1,117 +1,210 @@
-from gtts import gTTS
-import speech_recognition as sr
-import os
-import re
+import pyttsx3 #pip install pyttsx3
+import speech_recognition as sr #pip install speechRecognition
+import datetime
+import wikipedia #pip install wikipedia
 import webbrowser
+import os
 import smtplib
-import requests
-#from weather import Weather
+import time
+import imaplib
+import email
 
-def talkToMe(audio):
-    "speaks audio passed as argument"
-
-    print(audio)
-    for line in audio.splitlines():
-        os.system("say " + audio)
-
-    #  use the system's inbuilt say command instead of mpg123
-    #  text_to_speech = gTTS(text=audio, lang='en')
-    #  text_to_speech.save('audio.mp3')
-    #  os.system('mpg123 audio.mp3')
+engine = pyttsx3.init('sapi5')
+voices = engine.getProperty('voices')
+# print(voices[1].id)
+engine.setProperty('voice', voices[0].id)
 
 
-def myCommand():
-    "listens for commands"
+def speak(audio):
+    engine.say(audio)
+    engine.runAndWait()
+    
+speak("hello tell me how may I help you")
+
+
+def wishMe():
+    hour = int(datetime.datetime.now().hour)
+    if hour>=0 and hour<12:
+        speak("Good Morning!")
+
+    elif hour>=12 and hour<18:
+        speak("Good Afternoon!")   
+
+    else:
+        speak("Good Evening!")  
+
+         
+
+def takeCommand():
+    #It takes microphone input from the user and returns string output
 
     r = sr.Recognizer()
-
     with sr.Microphone() as source:
-        print('Ready...')
+        print("Listening...")
         r.pause_threshold = 1
-        r.adjust_for_ambient_noise(source, duration=1)
         audio = r.listen(source)
 
     try:
-        command = r.recognize_google(audio).lower()
-        print('You said: ' + command + '\n')
+        print("Recognizing...")    
+        query = r.recognize_google(audio, language='en-in')
+        print(f"User said: {query}\n")
 
-    #loop back to continue to listen for commands if unrecognizable speech is received
-    except sr.UnknownValueError:
-        print('Your last command couldn\'t be heard')
-        command = myCommand();
+    except Exception as e:
+        # print(e)    
+        print("Say that again please...")  
+        return "None"
+    return query
 
-    return command
+def sendEmail(to, content):
 
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.ehlo()
+    server.starttls()
+    server.login('from_mail ie yourmail', 'yourp_password')
+    server.sendmail('to_mail', to, content)
+    server.close()
+    speak('Email sent.')
 
-def assistant(command):
-    "if statements for executing commands"
+if __name__ == "__main__":
+    wishMe()
+    while True:
+    # if 1:
+        query = takeCommand().lower()
 
-    if 'open reddit' in command:
-        reg_ex = re.search('open reddit (.*)', command)
-        url = 'https://www.reddit.com/'
-        if reg_ex:
-            subreddit = reg_ex.group(1)
-            url = url + 'r/' + subreddit
-        webbrowser.open(url)
-        print('Done!')
+        # Logic for executing tasks based on query
+        if 'wikipedia' in query:
+            speak('Searching Wikipedia...')
+            query = query.replace("wikipedia", "")
+            results = wikipedia.summary(query, sentences=2)
+            speak("According to Wikipedia")
+            print(results)
+            speak(results)
 
-    elif 'open website' in command:
-        reg_ex = re.search('open website (.+)', command)
-        if reg_ex:
-            domain = reg_ex.group(1)
-            url = 'https://www.' + domain
-            webbrowser.open(url)
-            print('Done!')
-        else:
-            pass
+        elif 'open youtube' in query:
+            webbrowser.open("youtube.com")
 
-    elif 'what\'s up' in command:
-        talkToMe('Just doing my thing')
-    elif 'joke' in command:
-        res = requests.get(
-                'https://icanhazdadjoke.com/',
-                headers={"Accept":"application/json"}
-                )
-        if res.status_code == requests.codes.ok:
-            talkToMe(str(res.json()['joke']))
-        else:
-            talkToMe('oops!I ran out of jokes')
-   
+        elif 'open google' in query:
+            webbrowser.open("google.com")
 
-    elif 'email' in command:
-        talkToMe('Who is the recipient?')
-        recipient = myCommand()
-
-        if 'John' in recipient:
-            talkToMe('What should I say?')
-            content = myCommand()
-
-            #init gmail SMTP
-            mail = smtplib.SMTP('smtp.gmail.com', 587)
-
-            #identify to server
-            mail.ehlo()
-
-            #encrypt session
-            mail.starttls()
-
-            #login
-            mail.login('username', 'password')
-
-            #send message
-            mail.sendmail('John Fisher', 'JARVIS2.0@protonmail.com', content)
-
-            #end mail connection
-            mail.close()
-
-            talkToMe('Email sent.')
-
-        else:
-            talkToMe('I don\'t know what you mean!')
+        elif 'open stackoverflow' in query:
+            webbrowser.open("stackoverflow.com")   
 
 
-talkToMe('I am ready for your command')
+        elif 'play music' in query:
+            music_dir = 'D:\\Non Critical\\songs\\Favorite Songs2'
+            songs = os.listdir(music_dir)
+            print(songs)    
+            os.startfile(os.path.join(music_dir, songs[0]))
 
-#loop to continue executing multiple commands
-while True:
-    assistant(myCommand())
+        elif 'the time' in query:
+            strTime = datetime.datetime.now().strftime("%H:%M:%S")    
+            speak(f"Sir, the time is {strTime}")
+
+        
+            
+        elif 'open word' in query:
+            wordpath="C:/Program Files/Microsoft Office/root/Office16/WINWORD.exe"
+            os.startfile(wordpath)
+            
+        elif 'open powerpoint' in query:
+            powerpointpath="C:/Program Files/Microsoft Office/root/Office16/POWERPNT.exe"
+            os.startfile(powerpointpath)
+
+        elif 'email' in query:
+            try:
+            
+                speak('What is the subject?')
+                time.sleep(3)
+                subject = takeCommand()
+                speak('What should I say?')
+                message = takeCommand()
+                content = 'Subject: {}\n\n{}'.format(subject, message)
+    
+                #init gmail SMTP
+                mail = smtplib.SMTP('smtp.gmail.com', 587)
+    
+                #identify to server
+                mail.ehlo()
+    
+                #encrypt session
+                mail.starttls()
+    
+                #login
+                mail.login('snehasahu1920@gmail.com', 'welcome!2#')
+    
+                #send message
+                mail.sendmail('snehasahu1920@gmail.com', 'ssahu@gemini-us.com', content)
+    
+                #end mail connection
+                mail.close()
+    
+                speak('Email sent.')
+            
+            except Exception as e:
+                print(e)
+                speak("Sorry my friend. I am not able to send this email")
+        
+        elif 'read' in query:
+            try:
+                mail = imaplib.IMAP4_SSL('imap.gmail.com')
+                mail.login("snehasahu1920@gmail.com","welcome!2#")
+                mail.list()
+                mail.select('inbox')
+                result, data = mail.uid('search', None, "UNSEEN") # (ALL/UNSEEN)
+                i = len(data[0].split())
+
+                for x in range(i):
+                    latest_email_uid = data[0].split()[x]
+                    result, email_data = mail.uid('fetch', latest_email_uid, '(RFC822)')
+                    # result, email_data = conn.store(num,'-FLAGS','\\Seen') 
+                    # this might work to set flag to seen, if it doesn't already
+                    raw_email = email_data[0][1]
+                    raw_email_string = raw_email.decode('utf-8')
+                    email_message = email.message_from_string(raw_email_string)
+                
+                    # Header Details
+                    date_tuple = email.utils.parsedate_tz(email_message['Date'])
+                    if date_tuple:
+                        local_date = datetime.datetime.fromtimestamp(email.utils.mktime_tz(date_tuple))
+                        local_message_date = "%s" %(str(local_date.strftime("%a, %d %b %Y %H:%M:%S")))
+                    email_from = str(email.header.make_header(email.header.decode_header(email_message['From'])))
+                    email_to = str(email.header.make_header(email.header.decode_header(email_message['To'])))
+                    subject = str(email.header.make_header(email.header.decode_header(email_message['Subject'])))
+                
+                    # Body details
+                    for part in email_message.walk():
+                        if part.get_content_type() == "text/plain":
+                            body = part.get_payload(decode=True)
+                            file_name = "email_" + str(x) + ".txt"
+                            output_file = open(file_name, 'w')
+                            var=output_file.write("From: %s\nTo: %s\nDate: %s\nSubject: %s\n\nBody: \n\n%s" %(email_from, email_to,local_message_date, subject, body.decode('utf-8')))
+                            print("#################")
+                            print(body.decode('utf-8'))
+                            speak(body.decode('utf-8'))
+                            output_file.close()
+                            #speak("read email")
+                        else:
+                            
+                            continue
+                
+            except Exception as e:
+                print(e)
+                speak("Sorry not able to read mail")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
